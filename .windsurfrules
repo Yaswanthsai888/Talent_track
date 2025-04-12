@@ -1,0 +1,137 @@
+General Code Style & Formatting
+Use functional and declarative programming patterns; avoid classes unless required (e.g., SQLAlchemy models).
+
+Prefer iteration and modularization over duplication; break large functions into smaller, reusable utilities (e.g., calculateCandidateRank).
+
+Use descriptive variable names with auxiliary verbs (e.g., isTestActive, hasSkillsMatched).
+
+Backend Structure: Organize into routes/, models/, services/, utils/, config/, and tests/.
+
+Frontend Structure: Organize into screens/, components/, hooks/, utils/, static/, and types/.
+
+Follow Flask and Expo documentation, but prioritize scalability with async patterns and optimized builds.
+
+Naming Conventions
+Use lowercase with dashes for directories (e.g., services/test-service, components/job-card).
+
+Favor named exports for components (e.g., export const TestScreen).
+
+Use camelCase for variables/functions (e.g., fetchJobList), UPPER_CASE for constants (e.g., MAX_QUESTIONS_PER_TEST).
+
+Prefix async functions with async (e.g., asyncFetchResults).
+
+TypeScript Best Practices
+Use TypeScript for frontend and optionally Python type hints (via mypy) for backend in later phases.
+
+Prefer interfaces over types (e.g., interface JobData); avoid any and enums—use union types (e.g., 'easy' | 'medium' | 'hard').
+
+Enable strict mode ("strict": true) and enforce type safety for API responses (e.g., interface ApiResponse<T>).
+
+Use generics for reusable utilities (e.g., function paginate<T>(items: T[])).
+
+Syntax & Formatting
+Use function for pure functions in JS/TS (e.g., function computeScore()); async def for Python async functions.
+
+Avoid unnecessary braces; keep conditionals concise (e.g., if not user return jsonify({'error': 'Not found'})).
+
+Use declarative JSX (e.g., <FlatList data={jobs} renderItem={renderJob} />).
+
+Use Prettier + ESLint (JS/TS) and Black + Flake8 (Python) for formatting and linting; enforce via CI.
+
+Cap lines at 100 characters, but allow flexibility for readable SQL queries or complex logic.
+
+Styling & UI (Frontend)
+Use Expo components (View, Text) with Flexbox and useWindowDimensions for responsive layouts.
+
+Use styled-components or twrnc (Tailwind for RN) for styling; cache styles for performance.
+
+Implement dark mode with useColorScheme and a theme provider (e.g., ThemeContext).
+
+Ensure a11y with ARIA roles, native props, and testing (e.g., accessibilityLabel="Start Test").
+
+Use react-native-reanimated for animations (e.g., progress bars) and react-native-gesture-handler for gestures (e.g., swipe to bookmark jobs).
+
+Optimization: Lazy-load components (e.g., React.lazy) and use useMemo/useCallback for expensive renders.
+
+Project-Specific Additions for Scalability
+Backend (Flask/Python)
+Modularization: 
+Split into files by domain (e.g., routes/auth.py, services/job_service.py).
+
+Use blueprints for route organization (e.g., auth_bp = Blueprint('auth', __name__)).
+
+Performance:
+Use async Flask with asyncio or quart for concurrency (e.g., async def run_code()).
+
+Implement caching with Redis (e.g., cache.get('job_list')) for frequent queries.
+
+Paginate API responses (e.g., GET /api/jobs?page=1&limit=20).
+
+Database:
+Switch to PostgreSQL by Phase 2 for scalability; use indexes (e.g., INDEX(email) on users).
+
+Implement migrations with Flask-Migrate (Alembic) for schema changes.
+
+Support sharding or read replicas for high traffic (plan for Phase 4+).
+
+Error Handling:
+Use a custom error handler (e.g., @app.errorhandler(500)).
+
+Implement retries with tenacity (e.g., retry database calls) and circuit breakers with pybreaker.
+
+Logging: Use logging with structured logs (JSON) and integrate with a log aggregator (e.g., ELK stack).
+
+Security:
+Add rate limiting with flask-limiter (e.g., 100 requests/hour per IP).
+
+Prevent CSRF with JWT refresh tokens and secure headers (e.g., X-Content-Type-Options: nosniff).
+
+Frontend (React Native with Expo)
+Component Structure: 
+Screens: UserDashboardScreen, TestTakingScreen.
+
+Components: JobCard, SkillBadge.
+
+Hooks: useJobs, useTestTimer.
+
+State Management: 
+Use Redux Toolkit with thunks for async actions (e.g., fetchJobsThunk).
+
+Add offline support with Redux Persist and local storage for test progress.
+
+Navigation: Use @react-navigation with deep linking for shareable job URLs.
+
+API Integration: 
+Use axios with interceptors for retries and token refresh.
+
+Cache responses with react-query (e.g., useQuery('jobs', fetchJobs)).
+
+Performance: 
+Implement infinite scroll for job lists with FlatList’s onEndReached.
+
+Optimize images (e.g., resumes) with react-native-fast-image.
+
+Deployment & DevOps
+Containerization: Use Docker for backend (e.g., FROM python:3.11-slim) and Expo EAS for frontend builds.
+
+CI/CD: Set up GitHub Actions or Jenkins for linting, testing, and deployment.
+
+Load Balancing: Deploy with Kubernetes or AWS ECS for horizontal scaling.
+
+Monitoring: Use Prometheus + Grafana for metrics (e.g., API latency) and Sentry for error tracking.
+
+CDN: Serve static assets (e.g., resumes) via AWS S3 + CloudFront.
+
+Feature-Specific Guidelines
+Phase 1: Keep lightweight; optimize for quick iteration (e.g., SQLite OK for now).
+
+Phase 2: Add async test processing (e.g., Celery for grading).
+
+Phase 3: Cache skill-matching results; use vector search (e.g., PostgreSQL pgvector) for similarity.
+
+Phase 4: Precompute analytics with materialized views or background jobs.
+
+Phase 5: Offload code execution to a separate service (e.g., Judge0 cluster).
+
+Phase 6: Deploy AI models as microservices (e.g., FastAPI + TensorFlow Serving).
+
