@@ -16,11 +16,26 @@ app = FastAPI(title="Resume Parser Microservice")
 # Update CORS middleware configuration
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000"],  # Frontend origin
+    allow_origins=["https://pac-talent-track.web.app", "http://localhost:3000"],  # Frontend origins
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+@app.get("/")
+async def root():
+    """
+    Root endpoint providing API information and status
+    """
+    return {
+        "status": "ok",
+        "service": "Resume Parser API",
+        "version": "1.0",
+        "endpoints": {
+            "parse_resume": "/parse-resume/",
+            "docs": "/docs"
+        }
+    }
 
 @app.post("/parse-resume/")
 async def parse_resume_endpoint(file: UploadFile = File(...)):
