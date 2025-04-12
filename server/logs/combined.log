@@ -452,3 +452,11 @@
 {"level":"info","message":{"duration":"20ms","ip":"::1","method":"GET","status":304,"url":"/67edb21965245a4e8a46c2bc/applications/count","userAgent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/135.0.0.0 Safari/537.36"},"timestamp":"2025-04-12T16:35:04.178Z"}
 {"level":"info","message":{"duration":"26ms","ip":"::1","method":"GET","status":304,"url":"/67edac2446591c35156f7617/applications/count","userAgent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/135.0.0.0 Safari/537.36"},"timestamp":"2025-04-12T16:35:04.194Z"}
 {"level":"info","message":{"duration":"23ms","ip":"::1","method":"GET","status":304,"url":"/67edac2446591c35156f7617/applications/count","userAgent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/135.0.0.0 Safari/537.36"},"timestamp":"2025-04-12T16:35:04.220Z"}
+{"level":"info","message":"Server running on port 5000","timestamp":"2025-04-12T16:55:11.457Z"}
+{"level":"info","message":"Redis status will be reported once connection attempt completes","timestamp":"2025-04-12T16:55:11.461Z"}
+{"level":"warn","message":"Redis connection failed, running in fallback mode","timestamp":"2025-04-12T16:55:11.470Z"}
+{"level":"warn","message":"Redis connection failed, running in fallback mode","timestamp":"2025-04-12T16:55:11.684Z"}
+{"level":"warn","message":"Redis connection failed, running in fallback mode","timestamp":"2025-04-12T16:55:11.790Z"}
+{"level":"warn","message":"Redis connection failed, running in fallback mode","timestamp":"2025-04-12T16:55:11.954Z"}
+{"level":"warn","message":"Redis connection failed, running in fallback mode","timestamp":"2025-04-12T16:55:11.955Z"}
+{"level":"info","message":"Connected to MongoDB","timestamp":"2025-04-12T16:55:12.118Z"}
