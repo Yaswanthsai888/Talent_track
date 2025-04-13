@@ -1,5 +1,6 @@
 const express = require('express');
 const router = express.Router();
+const cors = require('cors');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
@@ -11,6 +12,17 @@ const fs = require('fs');
 
 // Configure multer for resume upload
 const upload = multer({ dest: 'uploads/' });
+
+// CORS Configuration
+const corsOptions = {
+  origin: ['https://pac-talent-track.web.app', 'http://localhost:3000'],
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  credentials: true,
+  optionsSuccessStatus: 200
+};
+
+router.use(cors(corsOptions));
 
 // User Registration with resume upload
 router.post('/register', upload.single('resume'), async (req, res) => {
@@ -47,33 +59,61 @@ router.post('/register', upload.single('resume'), async (req, res) => {
     // Parse resume if uploaded
     if (req.file) {
       try {
+        console.log('Processing resume file:', {
+          filename: req.file.originalname,
+          size: req.file.size,
+          path: req.file.path
+        });
+
         const formData = new FormData();
         formData.append('file', fs.createReadStream(req.file.path), {
           filename: req.file.originalname,
           contentType: 'application/pdf'
         });
 
-        const parseResponse = await axios.post('http://localhost:8000/parse-resume/', formData, {
-          headers: formData.getHeaders()
+        const parseResponse = await axios.post('https://talent-track-resume-parser.onrender.com/parse-resume/', formData, {
+          headers: {
+            ...formData.getHeaders(),
+            'Accept': 'application/json'
+          },
+          timeout: 30000 // 30 second timeout
         });
 
-        if (parseResponse.data.success) {
-          // Format skills as an array of strings
-          extractedSkills = parseResponse.data.skills.map(skill => skill.trim());
+        console.log('Resume parser response:', parseResponse.data);
+
+        if (parseResponse.data && parseResponse.data.success) {
+          if (Array.isArray(parseResponse.data.skills)) {
+            extractedSkills = parseResponse.data.skills
+              .map(skill => skill.trim())
+              .filter(skill => skill.length > 0);
+            console.log('Extracted skills:', extractedSkills);
+          } else {
+            console.warn('Skills data is not in expected format:', parseResponse.data.skills);
+          }
+        } else {
+          console.warn('Resume parsing was not successful:', parseResponse.data);
         }
 
         // Clean up uploaded file
         fs.unlinkSync(req.file.path);
       } catch (error) {
-        console.error('Resume parsing error:', error);
+        console.error('Resume parsing error:', {
+          message: error.message,
+          code: error.code,
+          response: error.response?.data
+        });
+        // Don't fail registration if resume parsing fails
+        extractedSkills = [];
       }
     }
 
     // Parse skills if they come as JSON string
     if (req.body.skills) {
       try {
-        const parsedSkills = JSON.parse(req.body.skills);
-        extractedSkills = parsedSkills.map(skill => skill.trim());
+        const parsedSkills = Array.isArray(req.body.skills) 
+          ? req.body.skills 
+          : JSON.parse(req.body.skills);
+        extractedSkills = [...new Set([...extractedSkills, ...parsedSkills.map(skill => skill.trim())])];
       } catch (error) {
         console.error('Skills parsing error:', error);
       }

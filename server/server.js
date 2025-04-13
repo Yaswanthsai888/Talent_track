@@ -1,6 +1,7 @@
+const express = require('express');
+const cors = require('cors');
 const mongoose = require('mongoose');
 const dotenv = require('dotenv');
-const app = require('./app');
 const queueService = require('./services/queueService');
 const { logger } = require('./middleware/logger');
 
@@ -11,6 +12,17 @@ dotenv.config();
 mongoose.set('strictQuery', false);
 
 // Import the Express app configuration
+const app = express();
+
+// CORS Configuration
+app.use(cors({
+  origin: ['https://pac-talent-track.web.app', 'http://localhost:3000', 'https://talent-track-backend.onrender.com'],
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  credentials: true,
+  exposedHeaders: ['Access-Control-Allow-Origin'],
+  optionsSuccessStatus: 200
+}));
 
 // Database Connection
 mongoose.connect(process.env.MONGODB_URI, {
