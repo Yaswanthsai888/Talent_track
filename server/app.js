@@ -4,11 +4,11 @@ const cors = require('cors');
 const dotenv = require('dotenv');
 const path = require('path');
 const helmet = require('helmet');
+const logger = require('./middleware/logger'); // Assuming logger is exported from this path
 
 // Import security middlewares
 const { apiLimiter, examLimiter, codeExecutionLimiter } = require('./middleware/rateLimiter');
 const { validateExamInput, validateQuestionInput, validateCodeSubmission } = require('./middleware/inputValidator');
-const { requestLogger, errorLogger, securityLogger } = require('./middleware/logger');
 
 // Load environment variables
 dotenv.config();
@@ -16,30 +16,30 @@ dotenv.config();
 const app = express();
 
 // Security middleware
-app.use(helmet()); // Adds various HTTP headers for security
 app.use(cors({
   origin: ['https://pac-talent-track.web.app', 'http://localhost:3000', 'https://talent-track-backend.onrender.com'],
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'Content-Length'],
   credentials: true,
   exposedHeaders: ['Access-Control-Allow-Origin'],
-  optionsSuccessStatus: 200
+  optionsSuccessStatus: 200,
+  preflightContinue: true
+}));
+
+// Enable pre-flight across all routes
+app.options('*', cors());
+
+app.use(helmet({ 
+  crossOriginResourcePolicy: { policy: "cross-origin" },
+  crossOriginOpenerPolicy: { policy: "unsafe-none" }
 }));
 
 // Body parsing middleware
 app.use(express.json({ limit: '50mb' })); // Increased JSON limit
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
-// Enable pre-flight requests for all routes
-app.options('*', cors());
-
 // Static files
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
-
-// Logging middleware
-app.use(requestLogger);
-app.use(errorLogger);
-app.use(securityLogger);
 
 // Rate limiting middleware
 app.use('/api', apiLimiter); // General API rate limit
@@ -69,13 +69,45 @@ app.get('/api/health', (req, res) => {
   res.status(200).json({ status: 'ok', message: 'Server is running' });
 });
 
+// Request logging middleware
+app.use((req, res, next) => {
+  logger.info(`Request received: ${req.method} ${req.path}`, {
+    headers: req.headers,
+    query: req.query,
+    body: req.body
+  });
+  next();
+});
+
+// 404 handler
+app.use((req, res, next) => {
+  logger.warn(`Route not found: ${req.method} ${req.path}`);
+  res.status(404).json({ 
+    message: 'Route not found',
+    path: req.path,
+    method: req.method
+  });
+});
+
 // Error handling middleware
-app.use(errorLogger);
 app.use((err, req, res, next) => {
-  console.error('Global error handler:', err.stack);
-  res.status(500).json({ 
-    message: 'Something went wrong!',
-    error: process.env.NODE_ENV === 'production' ? {} : err.message 
+  logger.error('Error occurred:', {
+    error: err.message,
+    stack: err.stack,
+    path: req.path,
+    method: req.method
+  });
+
+  if (err.name === 'MulterError') {
+    return res.status(400).json({ 
+      message: 'File upload error',
+      error: err.message
+    });
+  }
+
+  res.status(err.status || 500).json({ 
+    message: err.message || 'Internal server error',
+    path: req.path
   });
 });
 
