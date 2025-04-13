@@ -18,13 +18,20 @@ const app = express();
 // Security middleware
 app.use(helmet()); // Adds various HTTP headers for security
 app.use(cors({
-  origin: process.env.CORS_ORIGIN || 'http://localhost:3000',
-  credentials: true
+  origin: ['https://pac-talent-track.web.app', 'http://localhost:3000', 'https://talent-track-backend.onrender.com'],
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  credentials: true,
+  exposedHeaders: ['Access-Control-Allow-Origin'],
+  optionsSuccessStatus: 200
 }));
 
 // Body parsing middleware
-app.use(express.json({ limit: '10kb' })); // Limit JSON body size
-app.use(express.urlencoded({ extended: true, limit: '10kb' }));
+app.use(express.json({ limit: '50mb' })); // Increased JSON limit
+app.use(express.urlencoded({ extended: true, limit: '50mb' }));
+
+// Enable pre-flight requests for all routes
+app.options('*', cors());
 
 // Static files
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
