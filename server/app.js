@@ -25,7 +25,7 @@ app.use(cors({
 
 // Custom origin validation
 app.use((req, res, next) => {
-  const allowedOrigins = ['https://pac-talent-track.web.app', 'http://localhost:3000'];
+  const allowedOrigins = ['https://pac-talent-track.web.app', 'http://localhost:3000','https://pac-talent-track.web.app'];
   const origin = req.headers.origin;
   if (allowedOrigins.includes(origin)) {
     res.setHeader('Access-Control-Allow-Origin', origin);
