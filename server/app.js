@@ -13,25 +13,14 @@ const { validateExamInput, validateQuestionInput, validateCodeSubmission } = req
 dotenv.config();
 
 const app = express();
-
 // Security middleware
 app.use(cors({
-  origin: true, // Allow all origins - will be restricted by the check below
+  origin: 'https://pac-talent-track.web.app',
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
   credentials: true,
-  maxAge: 86400 // Cache preflight requests for 24 hours
+  maxAge: 86400
 }));
-
-// Custom origin validation
-app.use((req, res, next) => {
-  const allowedOrigins = ['https://pac-talent-track.web.app', 'http://localhost:3000'];
-  const origin = req.headers.origin;
-  if (allowedOrigins.includes(origin)) {
-    res.setHeader('Access-Control-Allow-Origin', origin);
-  }
-  next();
-});
 
 app.use(helmet({
   crossOriginResourcePolicy: false, // Allow cross-origin resource sharing
