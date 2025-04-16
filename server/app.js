@@ -16,20 +16,25 @@ const app = express();
 
 // Security middleware
 app.use(cors({
-  origin: ['https://pac-talent-track.web.app', 'http://localhost:3000', 'https://talent-track-backend.onrender.com'],
+  origin: true, // Allow all origins - will be restricted by the check below
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'Content-Length'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
   credentials: true,
-  exposedHeaders: ['Access-Control-Allow-Origin'],
-  optionsSuccessStatus: 200,
-  preflightContinue: true
+  maxAge: 86400 // Cache preflight requests for 24 hours
 }));
 
-// Enable pre-flight across all routes
-app.options('*', cors());
+// Custom origin validation
+app.use((req, res, next) => {
+  const allowedOrigins = ['https://pac-talent-track.web.app', 'http://localhost:3000'];
+  const origin = req.headers.origin;
+  if (allowedOrigins.includes(origin)) {
+    res.setHeader('Access-Control-Allow-Origin', origin);
+  }
+  next();
+});
 
-app.use(helmet({ 
-  crossOriginResourcePolicy: { policy: "cross-origin" },
+app.use(helmet({
+  crossOriginResourcePolicy: false, // Allow cross-origin resource sharing
   crossOriginOpenerPolicy: { policy: "unsafe-none" }
 }));
 
