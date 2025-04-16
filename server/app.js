@@ -4,8 +4,7 @@ const cors = require('cors');
 const dotenv = require('dotenv');
 const path = require('path');
 const helmet = require('helmet');
-const logger = require('./middleware/logger'); // Assuming logger is exported from this path
-
+const { logger } = require('./middleware/logger');
 // Import security middlewares
 const { apiLimiter, examLimiter, codeExecutionLimiter } = require('./middleware/rateLimiter');
 const { validateExamInput, validateQuestionInput, validateCodeSubmission } = require('./middleware/inputValidator');
