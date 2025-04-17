@@ -9,15 +9,19 @@ const QuestionForm = ({
   onCancel 
 }) => {
   const [formData, setFormData] = useState({
-    type,
-    title: '',
-    description: '',
-    difficulty: 'medium',
-    topic: '',
-    options: ['', '', '', ''],
-    correctAnswer: 0,
-    testCases: [{ input: '', output: '', isPublic: true }],
-    allowedLanguages: ['python', 'javascript', 'java']
+    type: type === 'aptitude' ? 'Multiple Choice' : 'Coding',
+    content: '',
+    difficulty: 'Easy',
+    category: '',
+    points: 1,
+    options: type === 'aptitude' ? [
+      { text: '', isCorrect: false },
+      { text: '', isCorrect: false },
+      { text: '', isCorrect: false },
+      { text: '', isCorrect: false }
+    ] : [],
+    testCases: type === 'coding' ? [{ input: '', expectedOutput: '', isPublic: true }] : [],
+    allowedLanguages: type === 'coding' ? ['python', 'javascript', 'java'] : []
   });
 
   useEffect(() => {
@@ -31,10 +35,13 @@ const QuestionForm = ({
     setFormData(prev => ({ ...prev, [name]: value }));
   };
 
-  const handleOptionChange = (index, value) => {
-    const newOptions = [...formData.options];
-    newOptions[index] = value;
-    setFormData(prev => ({ ...prev, options: newOptions }));
+  const handleOptionChange = (index, field, value) => {
+    setFormData(prev => ({
+      ...prev,
+      options: prev.options.map((opt, i) => 
+        i === index ? { ...opt, [field]: value } : field === 'isCorrect' ? { ...opt, isCorrect: false } : opt
+      )
+    }));
   };
 
   const handleTestCaseChange = (index, field, value) => {
@@ -46,7 +53,7 @@ const QuestionForm = ({
   const addTestCase = () => {
     setFormData(prev => ({
       ...prev,
-      testCases: [...prev.testCases, { input: '', output: '', isPublic: true }]
+      testCases: [...prev.testCases, { input: '', expectedOutput: '', isPublic: true }]
     }));
   };
 
@@ -57,11 +64,41 @@ const QuestionForm = ({
     }));
   };
 
+  const validateForm = () => {
+    if (!formData.content.trim()) {
+      toast.error('Question content is required');
+      return false;
+    }
+
+    if (type === 'aptitude') {
+      if (formData.options.some(opt => !opt.text.trim())) {
+        toast.error('All options must be filled out');
+        return false;
+      }
+      if (!formData.options.some(opt => opt.isCorrect)) {
+        toast.error('Please mark one option as correct');
+        return false;
+      }
+    } else {
+      if (formData.testCases.length === 0) {
+        toast.error('Add at least one test case');
+        return false;
+      }
+      if (formData.testCases.some(tc => !tc.input.trim() || !tc.expectedOutput.trim())) {
+        toast.error('All test case fields must be filled out');
+        return false;
+      }
+    }
+
+    return true;
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (!validateForm()) return;
+
     try {
       await onSubmit(formData);
-      toast.success('Question saved successfully');
     } catch (error) {
       toast.error('Failed to save question');
       console.error('Error saving question:', error);
@@ -72,26 +109,15 @@ const QuestionForm = ({
     <form onSubmit={handleSubmit} className="space-y-6">
       {/* Common Fields */}
       <div>
-        <label className="block text-sm font-medium text-gray-700">Title</label>
-        <input
-          type="text"
-          name="title"
-          value={formData.title}
-          onChange={handleInputChange}
-          required
-          className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-        />
-      </div>
-
-      <div>
-        <label className="block text-sm font-medium text-gray-700">Description</label>
+        <label className="block text-sm font-medium text-gray-700">Question Content</label>
         <textarea
-          name="description"
-          value={formData.description}
+          name="content"
+          value={formData.content}
           onChange={handleInputChange}
           required
           rows={4}
           className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+          placeholder="Enter your question here..."
         />
       </div>
 
@@ -105,37 +131,50 @@ const QuestionForm = ({
             required
             className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
           >
-            <option value="easy">Easy</option>
-            <option value="medium">Medium</option>
-            <option value="hard">Hard</option>
+            <option value="Easy">Easy</option>
+            <option value="Medium">Medium</option>
+            <option value="Hard">Hard</option>
           </select>
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700">Topic</label>
+          <label className="block text-sm font-medium text-gray-700">Category</label>
           <select
-            name="topic"
-            value={formData.topic}
+            name="category"
+            value={formData.category}
             onChange={handleInputChange}
             required
             className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
           >
-            <option value="">Select a topic</option>
+            <option value="">Select a category</option>
             {type === 'aptitude' ? (
               <>
-                <option value="quantitative">Quantitative</option>
-                <option value="logical">Logical Reasoning</option>
-                <option value="verbal">Verbal</option>
+                <option value="Numerical Reasoning">Numerical Reasoning</option>
+                <option value="Logical Reasoning">Logical Reasoning</option>
+                <option value="Verbal Ability">Verbal Ability</option>
               </>
             ) : (
               <>
-                <option value="arrays">Arrays</option>
-                <option value="strings">Strings</option>
-                <option value="graphs">Graphs</option>
-                <option value="dp">Dynamic Programming</option>
+                <option value="Arrays">Arrays</option>
+                <option value="Strings">Strings</option>
+                <option value="Dynamic Programming">Dynamic Programming</option>
+                <option value="Algorithms">Algorithms</option>
               </>
             )}
           </select>
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700">Points</label>
+          <input
+            type="number"
+            name="points"
+            value={formData.points}
+            onChange={handleInputChange}
+            required
+            min="1"
+            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+          />
         </div>
       </div>
 
@@ -144,22 +183,25 @@ const QuestionForm = ({
         <div className="space-y-4">
           <h3 className="text-lg font-medium">Options</h3>
           {formData.options.map((option, index) => (
-            <div key={index} className="flex items-center gap-2">
+            <div key={index} className="flex items-center gap-4">
               <input
                 type="text"
-                value={option}
-                onChange={(e) => handleOptionChange(index, e.target.value)}
+                value={option.text}
+                onChange={(e) => handleOptionChange(index, 'text', e.target.value)}
                 required
                 placeholder={`Option ${index + 1}`}
                 className="flex-1 rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
               />
-              <input
-                type="radio"
-                name="correctAnswer"
-                checked={formData.correctAnswer === index}
-                onChange={() => setFormData(prev => ({ ...prev, correctAnswer: index }))}
-                className="h-4 w-4 text-blue-600 focus:ring-blue-500"
-              />
+              <label className="inline-flex items-center">
+                <input
+                  type="radio"
+                  name="correctAnswer"
+                  checked={option.isCorrect}
+                  onChange={() => handleOptionChange(index, 'isCorrect', true)}
+                  className="h-4 w-4 text-blue-600 focus:ring-blue-500"
+                />
+                <span className="ml-2 text-sm text-gray-700">Correct Answer</span>
+              </label>
             </div>
           ))}
         </div>
@@ -205,36 +247,35 @@ const QuestionForm = ({
               {formData.testCases.map((testCase, index) => (
                 <div key={index} className="p-4 border rounded-lg">
                   <div className="flex justify-between items-start mb-2">
-                    <h4 className="font-medium">Test Case {index + 1}</h4>
+                    <div className="flex-1 grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700">Input</label>
+                        <textarea
+                          value={testCase.input}
+                          onChange={(e) => handleTestCaseChange(index, 'input', e.target.value)}
+                          rows={2}
+                          required
+                          className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700">Expected Output</label>
+                        <textarea
+                          value={testCase.expectedOutput}
+                          onChange={(e) => handleTestCaseChange(index, 'expectedOutput', e.target.value)}
+                          rows={2}
+                          required
+                          className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                        />
+                      </div>
+                    </div>
                     <button
                       type="button"
                       onClick={() => removeTestCase(index)}
-                      className="text-red-500 hover:text-red-700"
+                      className="ml-4 text-red-500 hover:text-red-700"
                     >
                       <FaTrash />
                     </button>
-                  </div>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700">Input</label>
-                      <textarea
-                        value={testCase.input}
-                        onChange={(e) => handleTestCaseChange(index, 'input', e.target.value)}
-                        required
-                        rows={2}
-                        className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700">Output</label>
-                      <textarea
-                        value={testCase.output}
-                        onChange={(e) => handleTestCaseChange(index, 'output', e.target.value)}
-                        required
-                        rows={2}
-                        className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-                      />
-                    </div>
                   </div>
                   <div className="mt-2">
                     <label className="inline-flex items-center">
@@ -274,4 +315,4 @@ const QuestionForm = ({
   );
 };
 
-export default QuestionForm; 
+export default QuestionForm;

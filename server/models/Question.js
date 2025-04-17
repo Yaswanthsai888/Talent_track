@@ -10,10 +10,6 @@ const questionSchema = new mongoose.Schema({
     type: String,
     required: [true, 'Question content is required']
   },
-  options: [{
-    text: String,
-    isCorrect: Boolean
-  }],
   difficulty: {
     type: String,
     enum: ['Easy', 'Medium', 'Hard'],
@@ -28,10 +24,45 @@ const questionSchema = new mongoose.Schema({
     required: [true, 'Question points are required'],
     min: [1, 'Points must be at least 1']
   },
+  // For Multiple Choice Questions
+  options: [{    text: {
+      type: String,
+      required: function() {
+        return this.parent().parent().type === 'Multiple Choice';
+      }
+    },
+    isCorrect: {
+      type: Boolean,
+      required: function() {
+        return this.parent().parent().type === 'Multiple Choice';
+      }
+    }
+  }],
+  // For Coding Questions
+  testCases: [{
+    input: String,
+    expectedOutput: String,
+    isPublic: {
+      type: Boolean,
+      default: true
+    }
+  }],
+  allowedLanguages: {
+    type: [String],
+    default: ['javascript', 'python', 'java'],
+    required: function() {
+      return this.type === 'Coding';
+    }
+  },
+  // Common fields
   createdBy: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User',
     required: true
+  },
+  version: {
+    type: Number,
+    default: 1
   },
   createdAt: {
     type: Date,
@@ -43,22 +74,32 @@ const questionSchema = new mongoose.Schema({
   }
 });
 
-// Update the updatedAt field before saving
+// Update the updatedAt timestamp on save
 questionSchema.pre('save', function(next) {
-  this.updatedAt = Date.now();
+  this.updatedAt = new Date();
   next();
 });
 
-// Validate options for aptitude questions
-questionSchema.pre('save', function(next) {
-  if (this.type === 'Multiple Choice' && (!this.options || this.options.length < 2)) {
-    next(new Error('Multiple Choice questions must have at least 2 options'));
+// Add validation for question type specific fields
+questionSchema.pre('validate', function(next) {
+  if (this.type === 'Multiple Choice') {
+    if (!Array.isArray(this.options) || this.options.length < 2) {
+      next(new Error('Multiple choice questions must have at least 2 options'));
+    }
+    if (!this.options.some(opt => opt.isCorrect)) {
+      next(new Error('Multiple choice questions must have at least one correct answer'));
+    }
+  } else if (this.type === 'Coding') {
+    if (!Array.isArray(this.testCases) || this.testCases.length === 0) {
+      next(new Error('Coding questions must have at least one test case'));
+    }
+    if (!Array.isArray(this.allowedLanguages) || this.allowedLanguages.length === 0) {
+      next(new Error('Coding questions must have at least one allowed language'));
+    }
   }
   next();
 });
 
-// Indexes for efficient querying
-questionSchema.index({ type: 1, difficulty: 1, category: 1 });
-questionSchema.index({ createdBy: 1 });
+const Question = mongoose.model('Question', questionSchema);
 
-module.exports = mongoose.model('Question', questionSchema); 
+module.exports = Question;

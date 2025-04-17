@@ -5,7 +5,6 @@ const dotenv = require('dotenv');
 const path = require('path');
 const helmet = require('helmet');
 const { logger } = require('./middleware/logger');
-// Import security middlewares
 const { apiLimiter, examLimiter, codeExecutionLimiter } = require('./middleware/rateLimiter');
 const { validateExamInput, validateQuestionInput, validateCodeSubmission } = require('./middleware/inputValidator');
 
@@ -13,31 +12,43 @@ const { validateExamInput, validateQuestionInput, validateCodeSubmission } = req
 dotenv.config();
 
 const app = express();
-// Security middleware
+
+// Security middleware - Helmet configuration
+app.use(helmet({
+  crossOriginResourcePolicy: false,
+  crossOriginEmbedderPolicy: false,
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      connectSrc: ["'self'", "http://localhost:5000", "http://localhost:3000"],
+      frameSrc: ["'self'"],
+      imgSrc: ["'self'", "data:", "https:"],
+      scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'"],
+      styleSrc: ["'self'", "'unsafe-inline'"],
+    },
+  },
+}));
+
+// CORS configuration
 app.use(cors({
-  origin: 'https://pac-talent-track.web.app',
+  origin: true, // Enable all origins in development
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
-  credentials: true,
-  maxAge: 86400
+  exposedHeaders: ['Content-Range', 'X-Content-Range'],
+  credentials: false // Since we're using token auth
 }));
 
-app.use(helmet({
-  crossOriginResourcePolicy: false, // Allow cross-origin resource sharing
-  crossOriginOpenerPolicy: { policy: "unsafe-none" }
-}));
-
-// Body parsing middleware
-app.use(express.json({ limit: '50mb' })); // Increased JSON limit
+// Body parsing middleware with increased limits
+app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
 // Static files
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // Rate limiting middleware
-app.use('/api', apiLimiter); // General API rate limit
-app.use('/api/exams', examLimiter); // Stricter limit for exam routes
-app.use('/api/code', codeExecutionLimiter); // Very strict limit for code execution
+app.use('/api', apiLimiter);
+app.use('/api/exams', examLimiter);
+app.use('/api/code', codeExecutionLimiter);
 
 // Import routes
 const authRoutes = require('./routes/authRoutes');
@@ -48,7 +59,7 @@ const applicationRoutes = require('./routes/applicationRoutes');
 const examRoutes = require('./routes/examRoutes');
 const questionRoutes = require('./routes/questionRoutes');
 
-// Use routes with validation
+// Use routes
 app.use('/api/auth', authRoutes);
 app.use('/api/user', userRoutes);
 app.use('/api/jobs', jobRoutes);
@@ -57,14 +68,18 @@ app.use('/api/applications', applicationRoutes);
 app.use('/api/exams', examRoutes);
 app.use('/api/questions', questionRoutes);
 
-// API health check endpoint
+// Health check endpoint
 app.get('/api/health', (req, res) => {
-  res.status(200).json({ status: 'ok', message: 'Server is running' });
+  res.status(200).json({ 
+    status: 'ok', 
+    message: 'Server is running',
+    timestamp: new Date().toISOString()
+  });
 });
 
-// Request logging middleware
+// Request logging
 app.use((req, res, next) => {
-  logger.info(`Request received: ${req.method} ${req.path}`, {
+  logger.info(`${req.method} ${req.path}`, {
     headers: req.headers,
     query: req.query,
     body: req.body
@@ -82,7 +97,7 @@ app.use((req, res, next) => {
   });
 });
 
-// Error handling middleware
+// Error handling
 app.use((err, req, res, next) => {
   logger.error('Error occurred:', {
     error: err.message,

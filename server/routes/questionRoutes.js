@@ -5,7 +5,7 @@ const { validateQuestionInput } = require('../middleware/inputValidator');
 const questionController = require('../controllers/questionController');
 
 // Get all questions
-router.get('/', protect, questionController.getAllQuestions);
+router.get('/', protect, questionController.getQuestions);
 
 // Get question by ID
 router.get('/:id', protect, questionController.getQuestionById);
@@ -19,4 +19,4 @@ router.put('/:id', protect, requireAdmin, validateQuestionInput, questionControl
 // Delete question (admin only)
 router.delete('/:id', protect, requireAdmin, questionController.deleteQuestion);
 
-module.exports = router; 
+module.exports = router;

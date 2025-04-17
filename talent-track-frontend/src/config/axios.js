@@ -1,10 +1,15 @@
 import axios from 'axios';
 
+// Determine the backend URL based on environment
+const backendUrl = process.env.NODE_ENV === 'development' 
+  ? 'http://localhost:5000/api'
+  : 'https://talent-track-backend.onrender.com/api';
+
 // Main backend instance
 const instance = axios.create({
-  baseURL: 'https://talent-track-backend.onrender.com', // Removed /api since it's added in routes
-  timeout: 10000, // Increased timeout for file uploads
-  withCredentials: true, // Changed to true to send credentials
+  baseURL: backendUrl,
+  timeout: 10000,
+  withCredentials: false, // Changed to false since we're using token auth
   headers: {
     'Accept': 'application/json',
     'Content-Type': 'application/json'
@@ -22,15 +27,16 @@ export const fastApiInstance = axios.create({
   }
 });
 
-// Main backend interceptors
+// Add request interceptor to attach auth token
 instance.interceptors.request.use(
   (config) => {
+    // Get token from localStorage
     const token = localStorage.getItem('token');
     if (token) {
       config.headers['Authorization'] = `Bearer ${token}`;
     }
     
-    // If we're sending FormData, let the browser set the correct Content-Type
+    // If we're sending FormData, let the browser set the Content-Type
     if (config.data instanceof FormData) {
       delete config.headers['Content-Type'];
     }
@@ -40,35 +46,23 @@ instance.interceptors.request.use(
   (error) => Promise.reject(error)
 );
 
+// Add response interceptor for auth and error handling
 instance.interceptors.response.use(
   (response) => response,
   (error) => {
+    // Handle 401 unauthorized errors
     if (error.response?.status === 401) {
       localStorage.removeItem('token');
       window.location.href = '/login';
     }
-    return Promise.reject(error);
-  }
-);
 
-// Add error handling interceptor
-instance.interceptors.response.use(
-  response => response,
-  error => {
+    // Log errors for debugging
     console.error('API Error:', {
       status: error.response?.status,
       data: error.response?.data,
       url: error.config?.url
     });
-    return Promise.reject(error);
-  }
-);
 
-// FastAPI interceptors
-fastApiInstance.interceptors.response.use(
-  (response) => response,
-  (error) => {
-    console.error('FastAPI Error:', error);
     return Promise.reject(error);
   }
 );

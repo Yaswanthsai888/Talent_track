@@ -4,7 +4,28 @@ const examSchema = new mongoose.Schema({
   jobId: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'JobPosting',
-    required: true
+    required: true,
+    index: true
+  },
+  name: {
+    type: String,
+    required: true,
+    trim: true
+  },
+  description: {
+    type: String,
+    trim: true
+  },
+  totalDuration: {
+    type: Number,
+    required: true,
+    min: 1
+  },
+  passingCriteria: {
+    type: Number,
+    required: true,
+    min: 0,
+    max: 100
   },
   questions: [{
     questionId: {
@@ -14,30 +35,20 @@ const examSchema = new mongoose.Schema({
     },
     version: {
       type: Number,
-      required: true
+      default: 1
     }
   }],
-  duration: {
-    type: Number, // in minutes
-    required: true
-  },
-  passingCriteria: {
-    type: Number, // percentage
-    required: true
-  },
-  createdBy: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'User',
-    required: true
-  },
-  // Exam configuration
   aptitudeConfig: {
     enabled: {
       type: Boolean,
       default: false
     },
     duration: Number,
-    passingScore: Number
+    passingScore: {
+      type: Number,
+      min: 0,
+      max: 100
+    }
   },
   codingConfig: {
     enabled: {
@@ -45,14 +56,29 @@ const examSchema = new mongoose.Schema({
       default: false
     },
     duration: Number,
-    passingScore: Number
+    passingScore: {
+      type: Number,
+      min: 0,
+      max: 100
+    }
+  },
+  createdBy: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    required: true
+  },
+  status: {
+    type: String,
+    enum: ['draft', 'active', 'completed', 'archived'],
+    default: 'draft'
   }
 }, {
   timestamps: true
 });
 
-// Indexes
-examSchema.index({ jobId: 1 });
-examSchema.index({ createdBy: 1 });
+// Index for faster lookups
+examSchema.index({ jobId: 1, status: 1 });
+examSchema.index({ createdBy: 1, status: 1 });
 
-module.exports = mongoose.model('Exam', examSchema); 
+const Exam = mongoose.model('Exam', examSchema);
+module.exports = Exam;

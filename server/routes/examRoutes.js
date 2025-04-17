@@ -12,30 +12,60 @@ const { validateExamInput } = require('../middleware/inputValidator');
 router.post('/jobs/:jobId/exam', protect, requireAdmin, async (req, res) => {
   try {
     const jobId = req.params.jobId;
-    const { name, description, totalDuration, passingCriteria, aptitudeRound, codingRound } = req.body;
+    const { 
+      name, 
+      description, 
+      totalDuration, 
+      passingCriteria, 
+      aptitudeRound, 
+      codingRound,
+      questions 
+    } = req.body;
+
+    console.log('Creating exam for job:', jobId, {
+      name,
+      totalDuration,
+      questionCount: questions?.length
+    });
 
     // Check if job exists
     const job = await JobPosting.findById(jobId);
     if (!job) {
+      console.log('Job not found:', jobId);
       return res.status(404).json({ message: 'Job not found' });
     }
 
     // Check if exam already exists for this job
     const existingExam = await Exam.findOne({ jobId });
     if (existingExam) {
+      console.log('Exam already exists for job:', jobId);
       return res.status(400).json({ message: 'Exam already exists for this job' });
     }
 
-    // Create new exam
+    // Validate required fields
+    if (!name || !totalDuration || !passingCriteria || !questions || !questions.length) {
+      console.log('Missing required exam fields');
+      return res.status(400).json({ 
+        message: 'Missing required fields',
+        required: ['name', 'totalDuration', 'passingCriteria', 'questions']
+      });
+    }
+
+    // Create new exam with versioned questions
     const exam = new Exam({
       jobId,
       name,
       description,
       totalDuration,
       passingCriteria,
-      aptitudeRound,
-      codingRound,
-      createdBy: req.user._id
+      questions: questions.map(q => ({
+        questionId: q.questionId,
+        version: q.version || 1
+      })),
+      aptitudeConfig: aptitudeRound || { enabled: false },
+      codingConfig: codingRound || { enabled: false },
+      createdBy: req.user.id,
+      status: 'active'
     });
 
     await exam.save();
@@ -44,9 +74,15 @@ router.post('/jobs/:jobId/exam', protect, requireAdmin, async (req, res) => {
     job.exam = exam._id;
     await job.save();
 
+    console.log('Exam created successfully:', exam._id);
     res.status(201).json(exam);
   } catch (error) {
-    res.status(500).json({ message: 'Error creating exam', error: error.message });
+    console.error('Error creating exam:', error);
+    res.status(500).json({ 
+      message: 'Error creating exam', 
+      error: error.message,
+      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
+    });
   }
 });
 
@@ -339,4 +375,4 @@ router.post('/submit', validateExamInput, examController.submitExam);
 // Get exam status
 router.get('/status/:jobId', examController.getExamStatus);
 
-module.exports = router; 
+module.exports = router;
