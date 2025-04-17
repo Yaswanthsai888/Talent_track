@@ -13,29 +13,28 @@ dotenv.config();
 
 const app = express();
 
-// Security middleware - Helmet configuration
-app.use(helmet({
-  crossOriginResourcePolicy: false,
-  crossOriginEmbedderPolicy: false,
-  contentSecurityPolicy: {
-    directives: {
-      defaultSrc: ["'self'"],
-      connectSrc: ["'self'", "http://localhost:5000", "http://localhost:3000"],
-      frameSrc: ["'self'"],
-      imgSrc: ["'self'", "data:", "https:"],
-      scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'"],
-      styleSrc: ["'self'", "'unsafe-inline'"],
-    },
-  },
-}));
-
-// CORS configuration
+// Security middleware
 app.use(cors({
-  origin: true, // Enable all origins in development
+  origin: true, // Allow all origins - will be restricted by the check below
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
-  exposedHeaders: ['Content-Range', 'X-Content-Range'],
-  credentials: false // Since we're using token auth
+  credentials: true,
+  maxAge: 86400 // Cache preflight requests for 24 hours
+}));
+
+// Custom origin validation
+app.use((req, res, next) => {
+  const allowedOrigins = ['https://pac-talent-track.web.app', 'http://localhost:3000'];
+  const origin = req.headers.origin;
+  if (allowedOrigins.includes(origin)) {
+    res.setHeader('Access-Control-Allow-Origin', origin);
+  }
+  next();
+});
+
+app.use(helmet({
+  crossOriginResourcePolicy: false, // Allow cross-origin resource sharing
+  crossOriginOpenerPolicy: { policy: "unsafe-none" }
 }));
 
 // Body parsing middleware with increased limits
