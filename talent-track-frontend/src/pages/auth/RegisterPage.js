@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import axios from '../../config/axios';
+import AnimatedBackground from '../../components/AnimatedBackground';
 
 const RegisterPage = () => {
   const navigate = useNavigate();
@@ -111,205 +112,201 @@ const RegisterPage = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
-      <div className="sm:mx-auto sm:w-full sm:max-w-md">
-        <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
+    <AnimatedBackground>
+      <div className="flex justify-center items-center min-h-screen px-4 py-12">
+        <div className="w-full max-w-2xl bg-white/20 backdrop-blur-md rounded-xl shadow-2xl p-8">
+          <h2 className="text-3xl font-bold text-center text-white mb-6">
             Create your account
           </h2>
-        <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
-        <p className="text-center text-sm text-gray-600">
+          
+          <p className="text-center text-white/80 mb-8">
             Or{' '}
-            <Link to="/login" className="font-medium text-indigo-600 hover:text-indigo-500">
+            <Link to="/login" className="text-blue-300 hover:text-blue-200 underline">
               sign in to your account
             </Link>
           </p>
-        </div>
 
-      <div className="mt-8 bg-white py-8 px-4 shadow sm:rounded-lg sm:px-10">
+          {error && (
+            <div className="bg-red-500/50 text-white p-3 rounded-lg mb-6 text-center" role="alert">
+              <span className="block sm:inline">{error}</span>
+            </div>
+          )}
 
-        {error && (
-          <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative" role="alert">
-            <span className="block sm:inline">{error}</span>
-        </div>
-        )}
+          <form className="space-y-6" onSubmit={handleSubmit}>
+            <div className="space-y-4">
+              <div>
+                <label htmlFor="name" className="block text-white mb-2">Full Name</label>
+                <input
+                  id="name"
+                  name="name"
+                  type="text"
+                  required
+                  className="w-full px-4 py-2 rounded-lg bg-white/20 backdrop-blur-md text-white border border-white/30 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="Enter your full name"
+                  value={formData.name}
+                  onChange={handleChange}
+                />
+              </div>
 
-        <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
-          <div className="rounded-md shadow-sm -space-y-px">
-            <div>
-              <label htmlFor="name" className="sr-only">Full Name</label>
-              <input
-                id="name"
-                name="name"
-                type="text"
-                required
-                className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-t-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm"
-                placeholder="Full Name"
-                value={formData.name}
-                onChange={handleChange}
-              />
-            </div>
-            <div>
-              <label htmlFor="email" className="sr-only">Email address</label>
-              <input
-                id="email"
-                name="email"
-                type="email"
-                required
-                className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm"
-                placeholder="Email address"
-                value={formData.email}
-                onChange={handleChange}
-              />
-            </div>
-            <div>
-            <label htmlFor="password" className="sr-only">Password</label>
-              <input
-                id="password"
-                name="password"
-                type="password"
-                required
-                className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm"
-                placeholder="Password"
-                value={formData.password}
-                onChange={handleChange}
-              />
-            </div>
-            <div>
-              <label htmlFor="confirmPassword" className="sr-only">Confirm Password</label>
-              <input
-                id="confirmPassword"
-                name="confirmPassword"
-                type="password"
-                required
-                className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm"
-                placeholder="Confirm Password"
-                value={formData.confirmPassword}
-                onChange={handleChange}
-              />
-            </div>
-            <div>
-              <label htmlFor="phoneNumber" className="sr-only">Phone Number</label>
-              <input
-                id="phoneNumber"
-                name="phoneNumber"
-                type="tel"
-                required
-                className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-b-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm"
-                placeholder="Phone Number"
-                value={formData.phoneNumber}
-                onChange={handleChange}
-              />
-            </div>
-          </div>
+              <div>
+                <label htmlFor="email" className="block text-white mb-2">Email address</label>
+                <input
+                  id="email"
+                  name="email"
+                  type="email"
+                  required
+                  className="w-full px-4 py-2 rounded-lg bg-white/20 backdrop-blur-md text-white border border-white/30 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="Enter your email"
+                  value={formData.email}
+                  onChange={handleChange}
+                />
+              </div>
 
-          <div className="space-y-4">
-            <div>
-              <label htmlFor="role" className="block text-sm font-medium text-gray-700">
-              Account Type
-              </label>
-              <select
-                id="role"
-                name="role"
-                className="mt-1 block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
-                value={formData.role}
-                onChange={handleChange}
-              >
-                <option value="user">Job Seeker</option>
-                <option value="admin">Company Admin</option>
-              </select>
+              <div>
+                <label htmlFor="password" className="block text-white mb-2">Password</label>
+                <input
+                  id="password"
+                  name="password"
+                  type="password"
+                  required
+                  className="w-full px-4 py-2 rounded-lg bg-white/20 backdrop-blur-md text-white border border-white/30 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="Enter your password"
+                  value={formData.password}
+                  onChange={handleChange}
+                />
+              </div>
+
+              <div>
+                <label htmlFor="confirmPassword" className="block text-white mb-2">Confirm Password</label>
+                <input
+                  id="confirmPassword"
+                  name="confirmPassword"
+                  type="password"
+                  required
+                  className="w-full px-4 py-2 rounded-lg bg-white/20 backdrop-blur-md text-white border border-white/30 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="Confirm your password"
+                  value={formData.confirmPassword}
+                  onChange={handleChange}
+                />
+              </div>
+
+              <div>
+                <label htmlFor="phoneNumber" className="block text-white mb-2">Phone Number</label>
+                <input
+                  id="phoneNumber"
+                  name="phoneNumber"
+                  type="tel"
+                  required
+                  className="w-full px-4 py-2 rounded-lg bg-white/20 backdrop-blur-md text-white border border-white/30 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="Enter your phone number"
+                  value={formData.phoneNumber}
+                  onChange={handleChange}
+                />
+              </div>
+
+              <div>
+                <label htmlFor="role" className="block text-white mb-2">Account Type</label>
+                <select
+                  id="role"
+                  name="role"
+                  className="w-full px-4 py-2 rounded-lg bg-white/20 backdrop-blur-md text-white border border-white/30 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  value={formData.role}
+                  onChange={handleChange}
+                >
+                  <option value="user">Job Seeker</option>
+                  <option value="admin">Company Admin</option>
+                </select>
+              </div>
+
+              {formData.role === 'admin' ? (
+                <>
+                  <div>
+                    <label htmlFor="companyName" className="block text-white mb-2">Company Name</label>
+                    <input
+                      type="text"
+                      name="companyName"
+                      id="companyName"
+                      required
+                      className="w-full px-4 py-2 rounded-lg bg-white/20 backdrop-blur-md text-white border border-white/30 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      placeholder="Enter company name"
+                      value={formData.companyName}
+                      onChange={handleChange}
+                    />
+                  </div>
+                  <div>
+                    <label htmlFor="adminKey" className="block text-white mb-2">Admin Key</label>
+                    <input
+                      type="password"
+                      name="adminKey"
+                      id="adminKey"
+                      required
+                      className="w-full px-4 py-2 rounded-lg bg-white/20 backdrop-blur-md text-white border border-white/30 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      placeholder="Enter admin key"
+                      value={formData.adminKey}
+                      onChange={handleChange}
+                    />
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div>
+                    <label htmlFor="experience" className="block text-white mb-2">Years of Experience</label>
+                    <input
+                      type="number"
+                      name="experience"
+                      id="experience"
+                      min="0"
+                      className="w-full px-4 py-2 rounded-lg bg-white/20 backdrop-blur-md text-white border border-white/30 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      placeholder="Enter years of experience"
+                      value={formData.experience}
+                      onChange={handleChange}
+                    />
+                  </div>
+                  <div>
+                    <label htmlFor="skills" className="block text-white mb-2">Skills (comma-separated)</label>
+                    <input
+                      type="text"
+                      name="skills"
+                      id="skills"
+                      className="w-full px-4 py-2 rounded-lg bg-white/20 backdrop-blur-md text-white border border-white/30 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      placeholder="React, Node.js, Python"
+                      onChange={handleSkillsChange}
+                    />
+                  </div>
+                  <div>
+                    <label htmlFor="resume" className="block text-white mb-2">Resume (PDF only)</label>
+                    <input
+                      type="file"
+                      name="resume"
+                      id="resume"
+                      accept="application/pdf"
+                      onChange={handleResumeChange}
+                      className="w-full px-4 py-2 rounded-lg bg-white/20 backdrop-blur-md text-white border border-white/30 focus:outline-none focus:ring-2 focus:ring-blue-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+                    />
+                  </div>
+                </>
+              )}
             </div>
 
-            {formData.role === 'admin' ? (
-              <>
-                <div>
-                 <label htmlFor="companyName" className="block text-sm font-medium text-gray-700">
-                 Company Name
-                 </label>
-                 <input
-                 type="text"
-                 name="companyName"
-                 id="companyName"
-                    required
-                    className="mt-1 block w-full py-2 px-3 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
-                    value={formData.companyName}
-                    onChange={handleChange}
-                  />
-                </div>
-                <div>
-                 <label htmlFor="adminKey" className="block text-sm font-medium text-gray-700">
-                 Admin Key
-                 </label>
-                 <input
-                 type="password"
-                 name="adminKey"
-                 id="adminKey"
-                    required
-                    className="mt-1 block w-full py-2 px-3 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
-                    value={formData.adminKey}
-                    onChange={handleChange}
-                  />
-                </div>
-              </>
-            ) : (
-              <>
-                <div>
-                 <label htmlFor="experience" className="block text-sm font-medium text-gray-700">
-                 Years of Experience
-                 </label>
-                 <input
-                 type="number"
-                 name="experience"
-                 id="experience"
-                    min="0"
-                    className="mt-1 block w-full py-2 px-3 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
-                    value={formData.experience}
-                    onChange={handleChange}
-                  />
-                </div>
-                <div>
-                 <label htmlFor="skills" className="block text-sm font-medium text-gray-700">
-                 Skills (comma-separated)
-                 </label>
-                 <input
-                 type="text"
-                 name="skills"
-                 id="skills"
-                    className="mt-1 block w-full py-2 px-3 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
-                    placeholder="React, Node.js, Python"
-                    onChange={handleSkillsChange}
-                  />
-                </div>
-                <div>
-                  <label htmlFor="resume" className="block text-sm font-medium text-gray-700">
-                    Resume (PDF only)
-                  </label>
-                  <input
-                    type="file"
-                    name="resume"
-                    id="resume"
-                    accept="application/pdf"
-                    onChange={handleResumeChange}
-                    className="mt-1 block w-full py-2 px-3 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
-                  />
-                </div>
-              </>
-            )}
-          </div>
-
-          <div>
             <button
               type="submit"
               disabled={loading}
-              className={`w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 ${loading ? 'bg-indigo-400 cursor-not-allowed' : 'bg-indigo-600 hover:bg-indigo-700'}`}
+              className={`w-full flex justify-center py-3 px-4 rounded-lg text-white text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors ${
+                loading ? 'bg-blue-400/50 cursor-not-allowed' : 'bg-blue-600/80 hover:bg-blue-700/80'
+              }`}
             >
               {loading ? 'Registering...' : 'Register'}
             </button>
-          </div>
-        </form>
-      </div>
 
+            <div className="text-center mt-6">
+              <Link to="/" className="text-white hover:text-blue-200 underline">
+                Back to Home
+              </Link>
+            </div>
+          </form>
+        </div>
       </div>
-    </div>
+    </AnimatedBackground>
   );
 };
 

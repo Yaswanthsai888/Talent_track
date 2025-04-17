@@ -30,6 +30,24 @@ const JobCard = ({
   const [showExamModal, setShowExamModal] = useState(false);
   const [expanded, setExpanded] = useState(false);
   const [exam, setExam] = useState(null);
+  const [hasExam, setHasExam] = useState(false);
+  const [examStatus, setExamStatus] = useState(null);
+
+  const checkApplicationStatus = useCallback(async () => {
+    if (!job?._id || isAdmin) return;
+    
+    try {
+      const response = await axiosInstance.get(`/jobs/${job._id}/application-status`);
+      if (response.data) {
+        setHasApplied(response.data.hasApplied);
+        setApplicationStatus(response.data.applicationStatus);
+      }
+    } catch (error) {
+      if (error.response?.status !== 404) {
+        console.error('Error checking application status:', error);
+      }
+    }
+  }, [job?._id, isAdmin]);
 
   const calculateSkillMatch = useCallback(() => {
     if (!job?.requiredSkills || !userSkills || job?.requiredSkills.length === 0) {
@@ -67,24 +85,8 @@ const JobCard = ({
   }, [job?._id, isAdmin]);
 
   useEffect(() => {
-    const checkApplicationStatus = async () => {
-      if (!job?._id || isAdmin) return;
-      
-      try {
-        const response = await axiosInstance.get(`/jobs/${job._id}/application-status`);
-        if (response.data) {
-          setHasApplied(response.data.hasApplied);
-          setApplicationStatus(response.data.applicationStatus);
-        }
-      } catch (error) {
-        if (error.response?.status !== 404) {
-          console.error('Error checking application status:', error);
-        }
-      }
-    };
-
     checkApplicationStatus();
-  }, [job?._id, isAdmin]);
+  }, [job?._id, isAdmin, checkApplicationStatus]);
 
   useEffect(() => {
     // Calculate skill match when component mounts or when job/userSkills change
@@ -113,6 +115,69 @@ const JobCard = ({
 
     fetchExam();
   }, [job?._id, isAdmin]);
+
+  useEffect(() => {
+    let retryCount = 0;
+    let timeoutId;
+
+    const fetchExamStatus = async () => {
+      if (!job?._id || !hasApplied || !hasExam) return;
+      
+      try {
+        const response = await axiosInstance.get(`/exams/jobs/${job._id}/exam/status`);
+        setExamStatus(response.data.status);
+        // Reset retry count on success
+        retryCount = 0;
+      } catch (error) {
+        if (error.response?.status === 429) {
+          // Rate limit hit - use exponential backoff
+          const backoffTime = Math.min(1000 * Math.pow(2, retryCount), 32000);
+          retryCount++;
+          timeoutId = setTimeout(fetchExamStatus, backoffTime);
+        } else if (error.response?.status !== 404) {
+          console.error('Error checking exam status:', error);
+        }
+      }
+    };
+
+    fetchExamStatus();
+
+    return () => {
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+      }
+    };
+  }, [job?._id, hasApplied, hasExam]);
+
+  useEffect(() => {
+    const checkExamAvailability = async () => {
+      if (!job?._id || !hasApplied) return;
+      
+      try {
+        const response = await axiosInstance.get(`/exams/jobs/${job._id}/exam`);
+        if (response.data) {
+          setHasExam(true);
+          setExam(response.data);
+        }
+      } catch (error) {
+        if (error.response?.status === 404) {
+          // This is expected if exam doesn't exist yet
+          setHasExam(false);
+          setExam(null);
+        } else if (error.response?.status === 400) {
+          // Application not accepted yet
+          toast.warning(error.response.data.message);
+          setHasExam(false);
+          setExam(null);
+        } else {
+          console.error('Error checking exam availability:', error);
+          toast.error('Failed to check exam availability');
+        }
+      }
+    };
+
+    checkExamAvailability();
+  }, [job?._id, hasApplied]);
 
   if (!job || !job.title || !job.company) {
     return null;
@@ -177,6 +242,23 @@ const JobCard = ({
     }
   };
 
+  const startExam = async () => {
+    try {
+      const response = await axiosInstance.post(`/exams/jobs/${job._id}/exam/start`);
+      if (response.data) {
+        // Redirect to exam page with job ID as query parameter
+        navigate(`/exams?jobId=${job._id}`);
+      }
+    } catch (error) {
+      if (error.response?.data?.message) {
+        toast.error(error.response.data.message);
+      } else {
+        toast.error('Failed to start exam');
+      }
+      console.error('Error starting exam:', error);
+    }
+  };
+
   const formatSalary = (min, max, currency) => {
     if (!min || !max || !currency) {
       return 'Salary not specified';
@@ -208,93 +290,91 @@ const JobCard = ({
   };
 
   return (
-    <div className="bg-white rounded-xl shadow-lg p-6 mb-6 transition-all hover:shadow-xl hover:-translate-y-1 relative">
+    <div className="bg-white rounded-xl shadow-lg p-4 sm:p-6 mb-6 transition-all hover:shadow-xl relative max-w-4xl mx-auto">
       <div className="flex flex-col md:flex-row md:justify-between md:items-start mb-4 gap-4">
-        {!isAdmin && userSkills.length > 0 && job?.requiredSkills?.length > 0 && (
-          <div className="absolute -top-3 -right-3 bg-blue-500 text-white text-sm font-bold px-3 py-1 rounded-full shadow-md">
-            {Math.round(calculateSkillMatch())}% Match
-          </div>
-        )}
-        <div>
-          <h3 className="text-2xl font-bold text-gray-900 mb-1">{job.title}</h3>
-          <p className="text-lg text-gray-700 font-medium">{job.company}</p>
+        <div className="flex-1 min-w-0">
+          <h3 className="text-xl sm:text-2xl font-bold text-gray-900 mb-1 truncate">{job.title}</h3>
+          <p className="text-base sm:text-lg text-gray-700 font-medium truncate">{job.company}</p>
         </div>
         {isAdmin && (
-          <div className="flex space-x-2">
+          <div className="flex flex-wrap gap-2">
             <Button
               onClick={handleEditClick}
-              className="bg-blue-500 hover:bg-blue-600 text-white"
+              className="bg-blue-500 hover:bg-blue-600 text-white text-sm px-3 py-1"
               type="button"
             >
-              <FaEdit className="mr-2" /> Edit
+              <FaEdit className="mr-1" /> Edit
             </Button>
             <Button
               onClick={() => onDelete && onDelete(job._id)}
-              className="bg-red-500 hover:bg-red-600 text-white"
+              className="bg-red-500 hover:bg-red-600 text-white text-sm px-3 py-1"
               type="button"
             >
-              <FaTrash className="mr-2" /> Delete
+              <FaTrash className="mr-1" /> Delete
             </Button>
             <Button
               onClick={() => setShowExamModal(true)}
-              className={`${exam ? 'bg-yellow-500 hover:bg-yellow-600' : 'bg-green-500 hover:bg-green-600'} text-white`}
+              className={`${exam ? 'bg-yellow-500 hover:bg-yellow-600' : 'bg-green-500 hover:bg-green-600'} text-white text-sm px-3 py-1`}
               type="button"
             >
-              <FaFileAlt className="mr-2" /> {exam ? 'Edit Exam' : 'Create Exam'}
+              <FaFileAlt className="mr-1" /> {exam ? 'Edit Exam' : 'Create Exam'}
             </Button>
           </div>
         )}
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
-        <div className="flex items-center text-gray-700">
-          <FaMapMarkerAlt className="mr-2 text-blue-500" />
-          <span className="font-medium">{job.location || 'Location not specified'}</span>
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 mb-4">
+        <div className="flex items-center text-gray-700 text-sm">
+          <FaMapMarkerAlt className="mr-2 text-blue-500 flex-shrink-0" />
+          <span className="font-medium truncate">{job.location || 'Location not specified'}</span>
         </div>
-        <div className="flex items-center text-gray-700">
-          <FaBriefcase className="mr-2 text-blue-500" />
-          <span className="font-medium">{job.employmentType || 'Type not specified'}</span>
+        <div className="flex items-center text-gray-700 text-sm">
+          <FaBriefcase className="mr-2 text-blue-500 flex-shrink-0" />
+          <span className="font-medium truncate">{job.employmentType || 'Type not specified'}</span>
         </div>
-        <div className="flex items-center text-gray-700">
-          <FaDollarSign className="mr-2 text-blue-500" />
-          <span className="font-medium">
+        <div className="flex items-center text-gray-700 text-sm">
+          <FaDollarSign className="mr-2 text-blue-500 flex-shrink-0" />
+          <span className="font-medium truncate">
             {job.salaryRange ? formatSalary(job.salaryRange.min, job.salaryRange.max, job.salaryRange.currency) : 'Salary not specified'}
           </span>
         </div>
-        <div className="flex items-center text-gray-700">
-          <FaGraduationCap className="mr-2 text-blue-500" />
-          <span className="font-medium">{job.educationLevel || 'Not specified'}</span>
+        <div className="flex items-center text-gray-700 text-sm">
+          <FaGraduationCap className="mr-2 text-blue-500 flex-shrink-0" />
+          <span className="font-medium truncate">{job.educationLevel || 'Not specified'}</span>
         </div>
-        <div className="flex items-center text-gray-700">
-          <FaClock className="mr-2 text-blue-500" />
-          <span className="font-medium">{job.minExperience ? `${job.minExperience} years experience` : 'Experience not specified'}</span>
+        <div className="flex items-center text-gray-700 text-sm">
+          <FaClock className="mr-2 text-blue-500 flex-shrink-0" />
+          <span className="font-medium truncate">{job.minExperience ? `${job.minExperience} years experience` : 'Experience not specified'}</span>
         </div>
         {isAdmin && (
-          <div className="flex items-center text-gray-700">
-            <FaUsers className="mr-2 text-blue-500" />
-            <span className="font-medium">{applicationCount} applications</span>
+          <div className="flex items-center text-gray-700 text-sm">
+            <FaUsers className="mr-2 text-blue-500 flex-shrink-0" />
+            <span className="font-medium truncate">{applicationCount} applications</span>
           </div>
         )}
       </div>
 
-      <div className="mb-6">
+      <div className="mb-4">
         <h4 className="text-lg font-semibold text-gray-800 mb-2">Job Overview</h4>
-        <p className={`text-gray-700 leading-relaxed ${expanded ? '' : 'line-clamp-3'}`}>
-          {job.overview || 'No overview provided'}
-        </p>
+        <div className="relative">
+          <p className={`text-gray-700 leading-relaxed text-sm sm:text-base ${expanded ? '' : 'max-h-24 overflow-hidden'}`}>
+            {job.overview || 'No overview provided'}
+          </p>
+          {!expanded && job.overview && job.overview.length > 150 && (
+            <div className="absolute bottom-0 left-0 right-0 h-12 bg-gradient-to-t from-white to-transparent"></div>
+          )}
+        </div>
         {job.overview && job.overview.length > 150 && (
           <button 
             onClick={toggleExpand}
-            className="mt-2 text-blue-600 hover:text-blue-800 font-medium text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 rounded"
-            aria-expanded={expanded}
-            aria-label={expanded ? 'Collapse job description' : 'Expand job description'}
+            className="mt-2 text-blue-600 hover:text-blue-800 font-medium text-sm"
           >
             {expanded ? 'Show less' : 'Read more'}
           </button>
         )}
       </div>
 
-      <div className="mb-6">
+      <div className="mb-4">
         <h4 className="text-lg font-semibold text-gray-800 mb-2">Required Skills</h4>
         <div className="flex flex-wrap gap-2">
           {job.requiredSkills && job.requiredSkills.length > 0 ? (
@@ -305,54 +385,83 @@ const JobCard = ({
                   userSkills.includes(skill) || userSkills.map(s => s.toLowerCase()).includes(skill.toLowerCase()) 
                     ? 'bg-green-100 text-green-800' 
                     : 'bg-blue-100 text-blue-800'
-                } px-3 py-1.5 rounded-full text-sm font-medium`}
+                } px-2 py-1 rounded-full text-xs sm:text-sm font-medium truncate max-w-[200px]`}
               >
                 {skill}
               </span>
             ))
           ) : (
-            <span className="text-gray-500">No skills specified</span>
+            <span className="text-gray-500 text-sm">No skills specified</span>
           )}
         </div>
       </div>
 
       {hasApplied && applicationStatus && (
-        <div className={`mb-4 p-2 rounded ${getStatusColor()}`}>
+        <div className={`mb-4 p-3 rounded-lg ${getStatusColor()} text-center sm:text-left`}>
           <p className="text-sm font-medium">{getStatusMessage()}</p>
+          {hasExam && applicationStatus === 'accepted' && (
+            <div className="mt-2 flex flex-col sm:flex-row gap-2 justify-center sm:justify-start">
+              {(!examStatus || examStatus === 'not_started') && (
+                <Button
+                  onClick={startExam}
+                  className="bg-blue-500 hover:bg-blue-600 text-white text-sm px-4 py-2"
+                  type="button"
+                >
+                  Take Assessment Test
+                </Button>
+              )}
+              {examStatus === 'in_progress' && (
+                <Button
+                  onClick={() => navigate(`/exams?jobId=${job._id}`)}
+                  className="bg-yellow-500 hover:bg-yellow-600 text-white text-sm px-4 py-2"
+                  type="button"
+                >
+                  Continue Assessment Test
+                </Button>
+              )}
+              {examStatus === 'completed' && (
+                <p className="text-sm text-green-600 font-medium">Assessment Test Completed</p>
+              )}
+              {examStatus === 'failed' && (
+                <p className="text-sm text-red-600 font-medium">Assessment Test Failed</p>
+              )}
+            </div>
+          )}
         </div>
       )}
 
-      <div className="flex justify-between items-center">
-        {!isAdmin && (
-          <Button
-            onClick={() => setShowDetailsModal(true)}
-            className="text-blue-600 hover:text-blue-800"
-            type="button"
-          >
-            View Details
-          </Button>
-        )}
-        {!isAdmin && !hasApplied && (
-          <Button
-            onClick={() => setShowModal(true)}
-            className="bg-blue-500 hover:bg-blue-600 text-white"
-            type="button"
-          >
-            Apply Now
-          </Button>
-        )}
-        {isAdmin && (
-          <div className="flex space-x-2">
+      <div className="flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-2">
+        {!isAdmin ? (
+          <>
+            <Button
+              onClick={() => setShowDetailsModal(true)}
+              className="text-blue-600 hover:text-blue-800 text-sm"
+              type="button"
+            >
+              View Details
+            </Button>
+            {!hasApplied && (
+              <Button
+                onClick={() => setShowModal(true)}
+                className="bg-blue-500 hover:bg-blue-600 text-white text-sm px-4 py-2"
+                type="button"
+              >
+                Apply Now
+              </Button>
+            )}
+          </>
+        ) : (
+          <div className="flex flex-wrap gap-2">
             <Button
               onClick={handleApplicationsClick}
-              className="bg-green-500 hover:bg-green-600 text-white"
+              className="bg-green-500 hover:bg-green-600 text-white text-sm px-4 py-2"
               type="button"
             >
               View Applications
             </Button>
             <Button
               onClick={() => setShowDetailsModal(true)}
-              className="bg-blue-500 hover:bg-blue-600 text-white"
+              className="bg-blue-500 hover:bg-blue-600 text-white text-sm px-4 py-2"
               type="button"
             >
               View Details
@@ -363,26 +472,26 @@ const JobCard = ({
 
       {expanded && (
         <div className="mt-4 pt-4 border-t">
-          <h4 className="font-semibold mb-2">Responsibilities:</h4>
+          <h4 className="font-semibold mb-2 text-lg">Responsibilities:</h4>
           {job.responsibilities && job.responsibilities.length > 0 ? (
-            <ul className="list-disc list-inside mb-4 space-y-2">
+            <ul className="list-disc list-inside mb-4 space-y-2 text-sm sm:text-base">
               {job.responsibilities.map((resp, index) => (
                 <li key={index} className="text-gray-700 pl-2">{resp}</li>
               ))}
             </ul>
           ) : (
-            <p className="text-gray-500 mb-4">No responsibilities specified</p>
+            <p className="text-gray-500 mb-4 text-sm">No responsibilities specified</p>
           )}
 
-          <h4 className="font-semibold mb-2">Benefits:</h4>
+          <h4 className="font-semibold mb-2 text-lg">Benefits:</h4>
           {job.benefits && job.benefits.length > 0 ? (
-            <ul className="list-disc list-inside space-y-2">
+            <ul className="list-disc list-inside space-y-2 text-sm sm:text-base">
               {job.benefits.map((benefit, index) => (
                 <li key={index} className="text-gray-700 pl-2">{benefit}</li>
               ))}
             </ul>
           ) : (
-            <p className="text-gray-500">No benefits specified</p>
+            <p className="text-gray-500 text-sm">No benefits specified</p>
           )}
         </div>
       )}

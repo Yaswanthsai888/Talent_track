@@ -9,10 +9,10 @@ const apiLimiter = rateLimit({
   legacyHeaders: false,
 });
 
-// Stricter limiter for exam-related routes
+// Exam routes limiter with more generous limits
 const examLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 20, // Limit each IP to 20 requests per windowMs
+  windowMs: 2 * 60 * 1000, // 2 minutes
+  max: 120, // 1 request per second on average
   message: 'Too many exam requests, please try again later.',
   standardHeaders: true,
   legacyHeaders: false,
@@ -21,7 +21,7 @@ const examLimiter = rateLimit({
 // Very strict limiter for code execution
 const codeExecutionLimiter = rateLimit({
   windowMs: 60 * 1000, // 1 minute
-  max: 5, // Limit each IP to 5 requests per windowMs
+  max: 10, // Increased slightly to handle retries
   message: 'Too many code execution requests, please try again later.',
   standardHeaders: true,
   legacyHeaders: false,
@@ -31,4 +31,4 @@ module.exports = {
   apiLimiter,
   examLimiter,
   codeExecutionLimiter
-}; 
+};

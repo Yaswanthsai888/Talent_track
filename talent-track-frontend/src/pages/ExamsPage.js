@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState, useEffect, useCallback } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import axiosInstance from '../services/axiosInstance';
 import { toast } from 'react-toastify';
 import AptitudeTest from '../components/AptitudeTest';
@@ -8,20 +8,67 @@ import ExamResults from '../components/ExamResults';
 
 const ExamsPage = () => {
   const navigate = useNavigate();
-  const [exams, setExams] = useState([]);
+  const location = useLocation();
   const [loading, setLoading] = useState(true);
   const [selectedExam, setSelectedExam] = useState(null);
   const [currentAttempt, setCurrentAttempt] = useState(null);
   const [showResults, setShowResults] = useState(false);
 
+  const startExam = useCallback(async (exam) => {
+    try {
+      if (!exam?.jobId) {
+        throw new Error('Invalid exam data');
+      }
+      
+      const response = await axiosInstance.post(`/exams/jobs/${exam.jobId}/exam/start`);
+      if (response.data) {
+        setCurrentAttempt(response.data);
+        // Don't navigate, just update the state to show the appropriate test component
+      } else {
+        throw new Error('Invalid response data');
+      }
+    } catch (error) {
+      const errorMessage = error.response?.data?.message || error.message || 'Failed to start exam';
+      toast.error(errorMessage);
+      console.error('Error starting exam:', error);
+      navigate('/'); // Redirect to home on error
+    }
+  }, [navigate]);
+
+  const fetchExamByJobId = useCallback(async (jobId) => {
+    try {
+      const response = await axiosInstance.get(`/exams/jobs/${jobId}/exam`);
+      if (response.data) {
+        setSelectedExam(response.data);
+        // Start the exam automatically
+        startExam(response.data);
+      }
+    } catch (error) {
+      const errorMessage = error.response?.data?.message || 'Failed to fetch exam';
+      toast.error(errorMessage);
+      console.error('Error fetching exam:', error);
+      navigate('/'); // Redirect to home on error
+    } finally {
+      setLoading(false);
+    }
+  }, [navigate, startExam]);
+
   useEffect(() => {
-    fetchExams();
-  }, []);
+    const params = new URLSearchParams(location.search);
+    const jobId = params.get('jobId');
+    
+    if (jobId) {
+      fetchExamByJobId(jobId);
+    } else {
+      fetchExams();
+    }
+  }, [location.search, fetchExamByJobId]);
 
   const fetchExams = async () => {
     try {
-      const response = await axiosInstance.get('/exams/available');
-      setExams(response.data);
+      await axiosInstance.get('/exams/available');
+      setSelectedExam(null);
+      setCurrentAttempt(null);
     } catch (error) {
       toast.error('Failed to fetch exams');
       console.error('Error fetching exams:', error);
@@ -30,18 +77,7 @@ const ExamsPage = () => {
     }
   };
 
-  const startExam = async (exam) => {
-    try {
-      const response = await axiosInstance.post(`/exams/jobs/${exam.jobId}/exam/start`);
-      setCurrentAttempt(response.data);
-      setSelectedExam(exam);
-    } catch (error) {
-      toast.error('Failed to start exam');
-      console.error('Error starting exam:', error);
-    }
-  };
-
-  const handleAptitudeSubmit = async (answers) => {
+  const handleAptitudeSubmit = async (answers, retryCount = 0) => {
     try {
       const response = await axiosInstance.post(
         `/exams/jobs/${selectedExam.jobId}/exam/aptitude/submit`,
@@ -57,12 +93,18 @@ const ExamsPage = () => {
         toast.error('Aptitude test failed. Please try again later.');
       }
     } catch (error) {
+      if (error.response?.status === 429 && retryCount < 3) {
+        const backoffTime = Math.min(1000 * Math.pow(2, retryCount), 32000);
+        toast.info('Server busy. Retrying submission...');
+        await new Promise(resolve => setTimeout(resolve, backoffTime));
+        return handleAptitudeSubmit(answers, retryCount + 1);
+      }
       toast.error('Failed to submit aptitude test');
       console.error('Error submitting aptitude test:', error);
     }
   };
 
-  const handleCodingSubmit = async (solutions) => {
+  const handleCodingSubmit = async (solutions, retryCount = 0) => {
     try {
       const response = await axiosInstance.post(
         `/exams/jobs/${selectedExam.jobId}/exam/coding/submit`,
@@ -71,6 +113,12 @@ const ExamsPage = () => {
       setCurrentAttempt(response.data);
       setShowResults(true);
     } catch (error) {
+      if (error.response?.status === 429 && retryCount < 3) {
+        const backoffTime = Math.min(1000 * Math.pow(2, retryCount), 32000);
+        toast.info('Server busy. Retrying submission...');
+        await new Promise(resolve => setTimeout(resolve, backoffTime));
+        return handleCodingSubmit(solutions, retryCount + 1);
+      }
       toast.error('Failed to submit coding test');
       console.error('Error submitting coding test:', error);
     }
@@ -93,6 +141,7 @@ const ExamsPage = () => {
           setShowResults(false);
           setSelectedExam(null);
           setCurrentAttempt(null);
+          navigate('/');
         }}
       />
     );
@@ -110,6 +159,7 @@ const ExamsPage = () => {
           onBack={() => {
             setSelectedExam(null);
             setCurrentAttempt(null);
+            navigate('/');
           }}
         />
       );
@@ -122,6 +172,7 @@ const ExamsPage = () => {
           onBack={() => {
             setSelectedExam(null);
             setCurrentAttempt(null);
+            navigate('/');
           }}
         />
       );
@@ -131,36 +182,16 @@ const ExamsPage = () => {
   return (
     <div className="container mx-auto px-4 py-8">
       <h1 className="text-3xl font-bold mb-8">Available Exams</h1>
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {exams.map((exam) => (
-          <div
-            key={exam._id}
-            className="bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition-shadow"
-          >
-            <h2 className="text-xl font-semibold mb-2">{exam.name}</h2>
-            <p className="text-gray-600 mb-4">{exam.description}</p>
-            
-            <div className="mb-4">
-              <h3 className="font-medium mb-2">Exam Details:</h3>
-              <ul className="text-sm text-gray-600 space-y-1">
-                <li>Total Duration: {exam.totalDuration} minutes</li>
-                <li>Aptitude Questions: {exam.aptitudeRound.totalQuestions}</li>
-                <li>Coding Problems: {exam.codingRound.totalProblems}</li>
-                <li>Passing Criteria: {exam.passingCriteria}%</li>
-              </ul>
-            </div>
-
-            <button
-              onClick={() => startExam(exam)}
-              className="w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 transition-colors"
-            >
-              Start Exam
-            </button>
-          </div>
-        ))}
-      </div>
+      {selectedExam ? (
+        <div className="text-center">
+          <p className="text-xl mb-4">Starting exam: {selectedExam.name}</p>
+          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500 mx-auto"></div>
+        </div>
+      ) : (
+        <p className="text-center text-gray-600">No exams available at this time.</p>
+      )}
     </div>
   );
 };
 
-export default ExamsPage; 
+export default ExamsPage;

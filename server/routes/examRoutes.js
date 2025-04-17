@@ -4,6 +4,7 @@ const { protect, requireAdmin, restrictTo } = require('../middleware/authMiddlew
 const Exam = require('../models/Exam');
 const ExamAttempt = require('../models/ExamAttempt');
 const JobPosting = require('../models/JobPosting');
+const JobApplication = require('../models/JobApplication');
 const codeExecutionService = require('../services/codeExecutionService');
 const examController = require('../controllers/examController');
 const { validateExamInput } = require('../middleware/inputValidator');
@@ -153,7 +154,26 @@ router.delete('/jobs/:jobId/exam', protect, requireAdmin, async (req, res) => {
 router.post('/jobs/:jobId/exam/start', protect, async (req, res) => {
   try {
     const jobId = req.params.jobId;
-    const exam = await Exam.findOne({ jobId });
+    
+    // First check if the user has applied and been accepted
+    const application = await JobApplication.findOne({
+      jobId,
+      userId: req.user._id
+    });
+
+    if (!application) {
+      return res.status(400).json({ message: 'You must apply for this job first' });
+    }
+
+    if (application.status !== 'accepted') {
+      return res.status(400).json({ 
+        message: 'Your application must be accepted before taking the exam' 
+      });
+    }
+
+    const exam = await Exam.findOne({ jobId })
+      .populate('questions.questionId');
+      
     if (!exam) {
       return res.status(404).json({ message: 'Exam not found' });
     }
@@ -165,7 +185,17 @@ router.post('/jobs/:jobId/exam/start', protect, async (req, res) => {
     });
 
     if (existingAttempt) {
-      return res.status(400).json({ message: 'You have already attempted this exam' });
+      // If there's an existing attempt, check if it's still valid
+      if (existingAttempt.overallStatus === 'failed') {
+        return res.status(400).json({ message: 'You have already failed this exam' });
+      }
+      
+      if (existingAttempt.overallStatus === 'completed') {
+        return res.status(400).json({ message: 'You have already completed this exam' });
+      }
+
+      // If it's in progress, return the existing attempt
+      return res.json(existingAttempt);
     }
 
     // Create new exam attempt
@@ -174,14 +204,20 @@ router.post('/jobs/:jobId/exam/start', protect, async (req, res) => {
       jobId,
       userId: req.user._id,
       aptitudeAttempt: {
-        startTime: new Date()
-      }
+        startTime: new Date(),
+        status: 'in_progress'
+      },
+      overallStatus: 'aptitude_in_progress'
     });
 
     await attempt.save();
     res.status(201).json(attempt);
   } catch (error) {
-    res.status(500).json({ message: 'Error starting exam', error: error.message });
+    console.error('Error starting exam:', error);
+    res.status(500).json({ 
+      message: 'Error starting exam', 
+      error: error.message 
+    });
   }
 });
 
