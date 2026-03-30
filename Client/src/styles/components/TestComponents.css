@@ -1,0 +1,27 @@
+.test-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 20px;
+}
+
+.timer {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  background: var(--error-color);
+  color: white;
+  padding: 10px 20px;
+  border-radius: 4px;
+  font-size: 1.2em;
+  font-weight: bold;
+  box-shadow: var(--shadow-sm);
+}
+
+.question-container {
+  display: grid;
+  grid-template-columns: 200px 1fr;
+  gap: 20px;
+  margin-top: 60px;
+}
+
+/* ... Add other test related styles ... */

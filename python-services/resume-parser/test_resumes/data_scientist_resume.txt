@@ -1,0 +1,26 @@
+Jane Smith
+Data Scientist
+
+Professional Summary:
+Innovative Data Scientist with expertise in machine learning and data analysis.
+
+Technical Skills:
+- Programming Languages: Python, R
+- Data Science Libraries: NumPy, Pandas, Scikit-learn
+- Machine Learning: TensorFlow, PyTorch
+- Data Visualization: Matplotlib, Seaborn
+- Big Data: Spark, Hadoop
+
+Professional Experience:
+Lead Data Scientist | Data Insights Corp
+- Developed machine learning models for predictive analytics
+- Implemented deep learning solutions for image recognition
+- Conducted advanced data analysis and reporting
+
+Projects:
+- Predictive Maintenance Model: Used machine learning to predict equipment failures
+- Customer Segmentation: Applied clustering algorithms for market analysis
+
+Certifications:
+- Google Professional Data Engineer
+- TensorFlow Developer Certificate

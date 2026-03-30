@@ -1,0 +1,197 @@
+version: '3.8'
+
+networks:
+  app-network:
+    driver: bridge
+
+volumes:
+  mongodb_data:
+  redis_data:
+  code_executor_temp:
+  postgres-data:
+  judge0-data:
+
+services:
+  redis:
+    image: redis:alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - app-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    restart: unless-stopped
+
+  mongo:
+    image: mongo:latest
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodb_data:/data/db
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: root
+      MONGO_INITDB_ROOT_PASSWORD: rootpassword
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')", "--quiet"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    networks:
+      - app-network
+    restart: unless-stopped
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  resume-parser:
+    build: 
+      context: ./python-services/resume-parser
+      dockerfile: Dockerfile
+    ports:
+      - "5001:5001"
+    networks:
+      - app-network
+    environment:
+      - FLASK_ENV=production
+      - SPACY_MODEL=en_core_web_sm
+    restart: unless-stopped
+    volumes:
+      - ./python-services/resume-parser:/app
+
+  code-executor:
+    build: 
+      context: ./python-services/code-executor
+      dockerfile: Dockerfile
+    ports:
+      - "5002:5002"
+    networks:
+      - app-network
+    environment:
+      - FLASK_ENV=production
+      - DOCKER_HOST=unix:///var/run/docker.sock
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - code_executor_temp:/tmp/code_executor
+    privileged: true
+    restart: unless-stopped
+
+  ai-evaluator:
+    build: 
+      context: ./python-services/ai-evaluator
+      dockerfile: Dockerfile
+    ports:
+      - "5003:5003"
+    networks:
+      - app-network
+    environment:
+      - FLASK_ENV=production
+      - SPACY_MODEL=en_core_web_sm
+    restart: unless-stopped
+
+  rag-service:
+    build: 
+      context: ./python-services/rag-service
+      dockerfile: Dockerfile
+    ports:
+      - "5004:5004"
+    networks:
+      - app-network
+    environment:
+      - FLASK_ENV=production
+      - MONGO_URI=mongodb://root:rootpassword@mongo:27017/talenttrack?authSource=admin
+      - DB_NAME=talent_track
+      - COLLECTION_NAME=candidate_evaluations
+    depends_on:
+      mongo:
+        condition: service_healthy
+    restart: unless-stopped
+
+  backend:
+    build: 
+      context: ./Server
+      dockerfile: Dockerfile
+      args:
+        - NODE_ENV=production
+    ports:
+      - "5000:5000"
+    depends_on:
+      mongo:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      resume-parser:
+        condition: service_started
+      code-executor:
+        condition: service_started
+      ai-evaluator:
+        condition: service_started
+      rag-service:
+        condition: service_started
+    networks:
+      - app-network
+    environment:
+      - MONGODB_URI=mongodb://root:rootpassword@mongo:27017/talenttrack?authSource=admin
+      - REDIS_URI=redis://redis:6379
+      - RESUME_PARSER_URL=http://resume-parser:5001
+      - CODE_EXECUTOR_URL=http://code-executor:5002
+      - AI_EVALUATOR_URL=http://ai-evaluator:5003
+      - RAG_SERVICE_URL=http://rag-service:5004
+      - JWT_SECRET=${JWT_SECRET:-your_jwt_secret_here}
+      - NODE_ENV=production
+    restart: unless-stopped
+
+  frontend:
+    build: 
+      context: ./Client
+      dockerfile: Dockerfile
+    ports:
+      - "80:80"
+    depends_on:
+      backend:
+        condition: service_healthy
+    networks:
+      - app-network
+    environment:
+      - REACT_APP_API_URL=http://backend:5000/api
+      - REACT_APP_WS_URL=ws://backend:5000
+    restart: unless-stopped
+
+  judge0:
+    image: judge0/judge0:latest
+    ports:
+      - "2358:2358"
+    environment:
+      - JUDGE0_FS_ROOT=/judge0
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - POSTGRES_HOST=postgres
+      - POSTGRES_PORT=5432
+      - POSTGRES_DB=judge0
+      - POSTGRES_USER=judge0
+      - JUDGE0_AUTH_TOKEN=${JUDGE0_AUTH_TOKEN}
+      - POSTGRES_PASSWORD=${JUDGE0_DB_PASSWORD}
+      - MEMORY_LIMIT=100M
+      - MAX_CODE_LENGTH=50000
+      - EXECUTION_TIMEOUT=10
+      - MAX_MEMORY=256M
+    depends_on:
+      - redis
+      - postgres
+    volumes:
+      - judge0-data:/judge0
+
+  postgres:
+    image: postgres:13-alpine
+    environment:
+      - POSTGRES_DB=judge0
+      - POSTGRES_USER=judge0
+      - POSTGRES_PASSWORD=${JUDGE0_DB_PASSWORD}
+    volumes:
+      - postgres-data:/var/lib/postgresql/data

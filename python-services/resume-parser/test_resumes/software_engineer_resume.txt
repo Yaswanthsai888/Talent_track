@@ -1,0 +1,26 @@
+John Doe
+Software Engineer
+
+Professional Summary:
+Experienced Software Engineer with expertise in full-stack web development and cloud technologies.
+
+Technical Skills:
+- Programming Languages: Python, JavaScript, Java
+- Web Technologies: React, Node.js, Express
+- Cloud Platforms: AWS, Azure
+- DevOps: Docker, Kubernetes, Git
+- Databases: MongoDB, PostgreSQL
+
+Professional Experience:
+Senior Software Engineer | Tech Innovations Inc.
+- Developed scalable web applications using React and Node.js
+- Implemented microservices architecture
+- Managed cloud infrastructure on AWS
+
+Projects:
+- E-commerce Platform: Built using React, Node.js, and MongoDB
+- CI/CD Pipeline: Implemented automated deployment using Docker and Kubernetes
+
+Certifications:
+- AWS Certified Developer
+- Docker Certified Associate

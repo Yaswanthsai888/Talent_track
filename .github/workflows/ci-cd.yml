@@ -1,0 +1,160 @@
+name: Talent Track CI/CD Pipeline
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+
+env:
+  DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
+  DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
+  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+jobs:
+  lint-and-test:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+    
+    # Backend Linting and Testing
+    - name: Setup Node.js
+      uses: actions/setup-node@v3
+      with:
+        node-version: '16'
+    
+    - name: Install Backend Dependencies
+      working-directory: ./Server
+      run: npm ci
+    
+    - name: Lint Backend
+      working-directory: ./Server
+      run: npm run lint
+    
+    - name: Backend Unit Tests
+      working-directory: ./Server
+      run: npm test
+
+    # Frontend Linting and Testing
+    - name: Setup React
+      working-directory: ./client
+      run: npm ci
+    
+    - name: Lint Frontend
+      working-directory: ./client
+      run: npm run lint
+    
+    - name: Frontend Unit Tests
+      working-directory: ./client
+      run: npm test
+
+    # Python Services Testing
+    - name: Setup Python
+      uses: actions/setup-python@v3
+      with:
+        python-version: '3.9'
+    
+    - name: Install Python Dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r python-services/resume-parser/requirements.txt
+        pip install -r python-services/code-executor/requirements.txt
+        pip install -r python-services/ai-evaluator/requirements.txt
+    
+    - name: Python Linting
+      run: |
+        pip install flake8
+        flake8 python-services
+
+    - name: Python Unit Tests
+      run: |
+        pip install pytest
+        pytest python-services
+
+  build-and-push:
+    needs: lint-and-test
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+    
+    # Build and Push Backend
+    - name: Build Backend Docker Image
+      working-directory: ./Server
+      run: docker build -t $DOCKER_USERNAME/talent-track-backend:${{ github.sha }} .
+    
+    - name: Push Backend Image
+      run: |
+        echo $DOCKER_PASSWORD | docker login -u $DOCKER_USERNAME --password-stdin
+        docker push $DOCKER_USERNAME/talent-track-backend:${{ github.sha }}
+
+    # Build and Push Frontend
+    - name: Build Frontend Docker Image
+      working-directory: ./client
+      run: docker build -t $DOCKER_USERNAME/talent-track-frontend:${{ github.sha }} .
+    
+    - name: Push Frontend Image
+      run: |
+        docker push $DOCKER_USERNAME/talent-track-frontend:${{ github.sha }}
+
+    # Build and Push Python Services
+    - name: Build Resume Parser
+      working-directory: ./python-services/resume-parser
+      run: docker build -t $DOCKER_USERNAME/talent-track-resume-parser:${{ github.sha }} .
+    
+    - name: Build Code Executor
+      working-directory: ./python-services/code-executor
+      run: docker build -t $DOCKER_USERNAME/talent-track-code-executor:${{ github.sha }} .
+    
+    - name: Build AI Evaluator
+      working-directory: ./python-services/ai-evaluator
+      run: docker build -t $DOCKER_USERNAME/talent-track-ai-evaluator:${{ github.sha }} .
+    
+    - name: Push Python Service Images
+      run: |
+        docker push $DOCKER_USERNAME/talent-track-resume-parser:${{ github.sha }}
+        docker push $DOCKER_USERNAME/talent-track-code-executor:${{ github.sha }}
+        docker push $DOCKER_USERNAME/talent-track-ai-evaluator:${{ github.sha }}
+
+  deploy:
+    needs: build-and-push
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Deploy to Production
+      env:
+        DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+        DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+        DEPLOY_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+      run: |
+        mkdir -p ~/.ssh
+        echo "$DEPLOY_KEY" > ~/.ssh/deploy_key
+        chmod 600 ~/.ssh/deploy_key
+        ssh -i ~/.ssh/deploy_key $DEPLOY_USER@$DEPLOY_HOST << EOF
+          cd /path/to/talent-track
+          git pull origin main
+          docker-compose down
+          docker-compose pull
+          docker-compose up -d
+          docker system prune -f
+        EOF
+
+  security-scan:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Run Trivy vulnerability scanner
+      uses: aquasecurity/trivy-action@master
+      with:
+        scan-type: 'fs'
+        ignore-unfixed: true
+        format: 'sarif'
+        output: 'trivy-results.sarif'
+        severity: 'CRITICAL,HIGH'
+
+    - name: Upload Trivy scan results to GitHub Security tab
+      uses: github/codeql-action/upload-sarif@v2
+      with:
+        sarif_file: 'trivy-results.sarif'

@@ -1,0 +1,316 @@
+.glass-morphism {
+    background: rgba(17, 34, 64, 0.7);
+    -webkit-backdrop-filter: blur(10px);
+    backdrop-filter: blur(10px);
+    border-radius: 16px;
+    padding: 2rem;
+    box-shadow: 0 4px 30px rgba(0, 255, 213, 0.1);
+    border: 1px solid rgba(0, 255, 213, 0.2);
+}
+
+.cyber-form {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+}
+
+.form-group {
+    position: relative;
+}
+
+.cyber-input {
+    width: 100%;
+    padding: 12px;
+    background: rgba(10, 25, 47, 0.8);
+    border: 1px solid var(--primary-color);
+    color: var(--text-primary);
+    font-size: 1rem;
+}
+
+.form-header {
+    text-align: center;
+    margin-bottom: 2rem;
+}
+
+.glow-line {
+    height: 2px;
+    background: linear-gradient(
+        90deg,
+        transparent,
+        var(--primary-color),
+        transparent
+    );
+    margin: 1rem auto;
+    width: 50%;
+}
+
+.cyber-button {
+    position: relative;
+    overflow: hidden;
+    transition: all 0.3s ease;
+}
+
+.cyber-button::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    left: -50%;
+    width: 200%;
+    height: 200%;
+    background: rgba(0, 255, 213, 0.1);
+    transform: rotate(45deg);
+    transition: all 0.3s ease;
+}
+
+.cyber-button:hover::before {
+    transform: rotate(45deg) translate(50%, 50%);
+}
+
+.loader {
+    width: 20px;
+    height: 20px;
+    border: 3px solid var(--text-primary);
+    border-bottom-color: transparent;
+    border-radius: 50%;
+    display: inline-block;
+    animation: rotation 1s linear infinite;
+}
+
+@keyframes rotation {
+    0% {
+        transform: rotate(0deg);
+    }
+    100% {
+        transform: rotate(360deg);
+    }
+}
+
+.admin-dashboard, .user-dashboard {
+    max-width: 1200px;
+    margin: 2rem auto;
+    padding: 2rem;
+}
+
+table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0 8px;
+    margin: 20px 0;
+}
+
+th, td {
+    padding: 1rem;
+    text-align: left;
+    background: var(--background-light);
+}
+
+th {
+    background: var(--background-dark);
+    color: var(--primary-color);
+    font-weight: 600;
+}
+
+tr {
+    transition: transform 0.3s ease;
+}
+
+tr:hover {
+    transform: translateX(5px);
+}
+
+.skills-section {
+    margin-top: 2rem;
+    padding: 1rem;
+    border-left: 2px solid var(--primary-color);
+}
+
+.skills-section ul {
+    list-style: none;
+    padding: 0;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+
+.skills-section li {
+    background: var(--background-light);
+    padding: 0.5rem 1rem;
+    border-radius: 20px;
+    font-size: 0.9rem;
+    border: 1px solid var(--primary-color);
+}
+
+.jobs-section {
+    margin-top: 2rem;
+}
+
+.jobs-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.5rem;
+}
+
+.jobs-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 1.5rem;
+    padding: 1rem;
+}
+
+.job-card {
+    padding: 1.5rem;
+    transition: transform 0.3s ease;
+}
+
+.job-card:hover {
+    transform: translateY(-5px);
+}
+
+.job-card h3 {
+    color: var(--primary-color);
+    margin-bottom: 1rem;
+}
+
+.matched-job {
+    border: 2px solid var(--primary-color);
+    position: relative;
+}
+
+.match-badge {
+    position: absolute;
+    top: -10px;
+    right: -10px;
+    background: var(--primary-color);
+    color: var(--background-dark);
+    padding: 0.25rem 0.75rem;
+    border-radius: 15px;
+    font-size: 0.8rem;
+    font-weight: bold;
+}
+
+.skill-tag {
+    display: inline-block;
+    padding: 0.25rem 0.75rem;
+    margin: 0.25rem;
+    background: var(--background-light);
+    border-radius: 15px;
+    font-size: 0.9rem;
+}
+
+.matched-skill {
+    background: var(--primary-color);
+    color: var(--background-dark);
+}
+
+.no-matches-message {
+    text-align: center;
+    padding: 2rem;
+    color: var(--text-secondary);
+}
+
+.job-actions {
+    display: flex;
+    gap: 1rem;
+    margin-top: 1rem;
+    padding-top: 1rem;
+    border-top: 1px solid rgba(0, 255, 213, 0.2);
+}
+
+.cyber-button.edit {
+    background: rgba(0, 255, 213, 0.1);
+}
+
+.cyber-button.delete {
+    background: rgba(255, 51, 102, 0.1);
+    border-color: var(--error-color);
+    color: var(--error-color);
+}
+
+.cyber-button.delete:hover {
+    background: var(--error-color);
+    color: var(--background-dark);
+}
+
+.cyber-button.cancel {
+    background: rgba(136, 146, 176, 0.1);
+    border-color: var(--text-secondary);
+    color: var(--text-secondary);
+}
+
+.form-actions {
+    display: flex;
+    gap: 1rem;
+    justify-content: flex-end;
+    margin-top: 1rem;
+}
+
+.job-card .description {
+    margin: 1rem 0;
+    color: var(--text-secondary);
+    line-height: 1.5;
+}
+
+textarea.cyber-input {
+    min-height: 120px;
+    resize: vertical;
+}
+
+.loading {
+    position: relative;
+    pointer-events: none;
+}
+
+.loading::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 20px;
+    height: 20px;
+    margin: -10px 0 0 -10px;
+    border: 2px solid var(--text-primary);
+    border-top-color: transparent;
+    border-radius: 50%;
+    animation: rotation 1s linear infinite;
+}
+
+.pagination {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 1rem;
+    margin-top: 2rem;
+    padding-top: 1rem;
+    border-top: 1px solid rgba(0, 255, 213, 0.2);
+}
+
+.pagination span {
+    color: var(--text-secondary);
+    font-size: 0.9rem;
+}
+
+.loading-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 2rem;
+    gap: 1rem;
+    color: var(--text-secondary);
+}
+
+.error-message {
+    margin-bottom: 1rem;
+    padding: 1rem;
+    background: rgba(255, 51, 102, 0.1);
+    border-color: var(--error-color);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.error-message p {
+    color: var(--error-color);
+    margin: 0;
+}

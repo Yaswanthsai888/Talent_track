@@ -1,0 +1,39 @@
+{
+  "dashboard": {
+    "id": null,
+    "title": "Test Analytics Dashboard",
+    "panels": [
+      {
+        "title": "Active Tests",
+        "type": "stat",
+        "datasource": "Prometheus",
+        "targets": [
+          {
+            "expr": "active_tests_total"
+          }
+        ]
+      },
+      {
+        "title": "Test Completion Rate",
+        "type": "gauge",
+        "datasource": "Prometheus",
+        "targets": [
+          {
+            "expr": "test_completion_rate"
+          }
+        ]
+      },
+      {
+        "title": "Average Test Scores",
+        "type": "graph",
+        "datasource": "Prometheus",
+        "targets": [
+          {
+            "expr": "rate(test_scores_sum[1h]) / rate(test_scores_count[1h])"
+          }
+        ]
+      }
+    ],
+    "refresh": "5s"
+  }
+}
